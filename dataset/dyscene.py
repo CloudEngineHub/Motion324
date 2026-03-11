@@ -12,18 +12,16 @@ from dataset.dataset_utils import load_uv_preprocessing_data, track_with_normal_
 
 
 class Dyscene16k_Dataset(Dataset):
-    def __init__(self, config, pcd_subdir="pcds", transform=None):
+    def __init__(self, config, transform=None):
         """
         Args:
-            root_dir (string): Directory with all the .glb files, .mp4 files, and the pcd_subdir.
-                               e.g., /home/share/Dataset/3d_object/dyobjs/Arti-XL/glbs/tracks/
-            pcd_subdir (string): Subdirectory under root_dir where object-named folders
-                                 containing .npy point clouds are located. Default is "pcds".
+            config: Dataset configuration object containing `dataset_path` and
+                    related dataset settings used in this class.
             transform (callable, optional): Optional transform to be applied on a sample.
         """
         self.root_dir = Path(config.dataset_path)
-        self.pcd_base_dir = self.root_dir / pcd_subdir
-        self.image_base_dir = self.root_dir / "all_images"
+        self.pcd_base_dir = self.root_dir / "pcds"
+        self.image_base_dir = self.root_dir / "images"
         if hasattr(config, 'train_lst') and config.train_lst:
             train_lst_path = config.train_lst
         else:
@@ -35,7 +33,7 @@ class Dyscene16k_Dataset(Dataset):
         self.num_pcd_samples = config.num_pcd_samples
 
         # Find all .glb files and derive object names all_train
-        with open(train_lst_path, 'r') as f: #valid all_unique_fliter 2kagain.lst
+        with open(train_lst_path, 'r') as f:
             self.obj_names = [line.strip() for line in f if line.strip()]
         
         self.obj_names = self.obj_names[config.dataset_begin:config.dataset_end]
@@ -43,7 +41,7 @@ class Dyscene16k_Dataset(Dataset):
         if not self.obj_names:
             raise RuntimeError(f"No .glb files found in {self.root_dir}")
 
-        print(f"Found {len(self.obj_names)} objects: {self.obj_names[0]}...") # Print first 5 for brevity
+        print(f"Found {len(self.obj_names)} objects: {self.obj_names[0]}...")
 
     def __len__(self):
         return len(self.obj_names) * self.replica
@@ -239,6 +237,10 @@ class Dyscene16k_Dataset(Dataset):
             new_idx = random.randint(0, len(self) - 1)
             return self[new_idx]
 
+        if np.all(rgb_frames[0] < 1e-6):
+            new_idx = random.randint(0, len(self) - 1)
+            return self[new_idx]
+            
         # Convert to tensors
         video_np = np.stack(rgb_frames, axis=0).astype(np.float32)
         vertex_np = np.stack(point_clouds_list, axis=0)

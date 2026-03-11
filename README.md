@@ -13,10 +13,13 @@
 [Zexiang Xu](https://zexiangxu.github.io/),
 [Anpei Chen](https://apchenstu.github.io/),
 </h5>
-<div align="center">
 
+<div align="center">
 Motion 3-to-4 reconstructs 3D motion from videos for 4D synthesis in a **feedforward** mannar within seconds.
+
 </div>
+
+https://github.com/user-attachments/assets/1b21f991-501c-440d-9504-0ea35395bdfe
 
 ## Quick Start
 
@@ -81,6 +84,8 @@ Download and install Blender for 4D asset rendering.
 
 Our results is rendered with [blender-4.0.0-linux-x64](https://download.blender.org/release/Blender4.0/blender-4.0.0-linux-x64.tar.xz), using the scripts which is modified from [bpy-renderer](https://github.com/huanngzh/bpy-renderer).
 
+`scripts/render_results.py` also provides basic visualization of results, which you can use to check the output animations.
+
 Installation steps:
 ```bash
 # Download Blender
@@ -94,7 +99,8 @@ export PATH=$PATH:$(pwd)/blender-4.0.0-linux-x64
 **Note**: As we use [xformers](https://github.com/facebookresearch/xformers) `memory_efficient_attention` with [flash_attn](https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1), the GPU device compute capability needs > 8.0. Otherwise, it would pop up an error. Check your GPU compute capability in [CUDA GPUs Page](https://developer.nvidia.com/cuda-gpus#compute).
 
 ### Dataset
-- [ ] TODO: Dataset will be provided. Please check back for updates.
+
+The **Motion80 benchmark** and the **training dataset** is available [here](https://huggingface.co/datasets/River-Chen/Motion324/tree/main).
 
 Update the dataset path in `configs/dyscene.yaml`:
 ```yaml
@@ -126,6 +132,8 @@ torchrun --nproc_per_node 8 --nnodes 1 --master_port 12346 train.py --config con
 ```
 
 ## 3. Inference
+> We use `rembg` for simple background removal from videos.  
+> However, we strongly recommend using [SAM2](https://github.com/facebookresearch/sam2) for best video background removal.  
 
 ### Generate 4D animation from a single video input
 
