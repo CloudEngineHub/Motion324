@@ -15,11 +15,17 @@
 </h5>
 
 <div align="center">
-Motion 3-to-4 reconstructs 3D motion from videos for 4D synthesis in a **feedforward** mannar within seconds.
+
+Motion 3-to-4 reconstructs 3D motion from videos for 4D synthesis in a <b>feedforward</b> manner within seconds.
 
 </div>
 
-https://github.com/user-attachments/assets/1b21f991-501c-440d-9504-0ea35395bdfe
+<br>
+
+<div align="center">
+<img src="https://github.com/user-attachments/assets/1b21f991-501c-440d-9504-0ea35395bdfe" width="90%">
+</div>
+
 
 ## Quick Start
 
