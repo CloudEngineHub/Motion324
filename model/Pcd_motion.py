@@ -471,9 +471,11 @@ class Motion_Latent_Model(nn.Module):
         tokenizer_input = tokenizer_input.reshape(B_vid * T_in, tokenizer_input.shape[-3], tokenizer_input.shape[-2], tokenizer_input.shape[-1])
         tokenizer_input = F.interpolate(tokenizer_input, (self.image_size, self.image_size), mode="bilinear", align_corners=False)
         
+        # forcing dino to fp32 to avoid potential instabilities. 
         with torch.no_grad():
-            image_tokens_raw = self.image_encoder(tokenizer_input)
-        
+            with torch.autocast(device_type='cuda', enabled=False):
+                image_tokens_raw = self.image_encoder(tokenizer_input.float())
+         
         x = image_tokens_raw.view(B_vid, T_in, self.num_patches_h, self.num_patches_w, image_tokens_raw.shape[-1])
         x = x.permute(0, 4, 1, 2, 3)
         latentT, latentH, latentW = x.shape[2], x.shape[3], x.shape[4]
