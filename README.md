@@ -6,6 +6,7 @@
 
 [![arXiv](https://img.shields.io/badge/Arxiv-2503.24391-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2601.14253) 
 [![Home Page](https://img.shields.io/badge/Project-Website-green.svg)](https://motion3-to-4.github.io/) 
+[![HuggingFace](https://img.shields.io/badge/🤗%20Dataset-River--Chen%2FMotion324-yellow)](https://huggingface.co/datasets/River-Chen/Motion324) 
 
 [Hongyuan Chen](https://hyuanChen.github.io/),
 [Xingyu Chen](https://rover-xingyu.github.io/),
@@ -51,11 +52,17 @@ cd ../../../..
 
 # 3. Run inference
 chmod +x ./scripts/4D_from_existing.sh
-./scripts/4D_from_existing.sh ./examples/chili.glb ./examples/chili.mp4 ./examples/output
+./scripts/4D_from_existing.sh ./examples/chili.glb ./examples/chili.mp4 ./examples/chili
 
 # Hunyuan needed
 chmod +x ./scripts/4D_from_video.sh
 ./scripts/4D_from_video.sh ./examples/tiger.mp4
+
+# 4. Render results
+# Render output from 4D_from_existing.sh:
+python scripts/render_results.py -- --output_dir ./examples/chili
+# Render output from 4D_from_video.sh:
+python scripts/render_results.py -- --output_dir ./examples/tiger_processed
 ```
 
 ## 1. Preparation
@@ -90,7 +97,10 @@ Download and install Blender for 4D asset rendering.
 
 Our results is rendered with [blender-4.0.0-linux-x64](https://download.blender.org/release/Blender4.0/blender-4.0.0-linux-x64.tar.xz), using the scripts which is modified from [bpy-renderer](https://github.com/huanngzh/bpy-renderer).
 
-`scripts/render_results.py` also provides basic visualization of results, which you can use to check the output animations.
+`scripts/render_results.py` provides basic visualization of results. It supports two modes:
+
+- **Batch mode** (default): scans all subdirectories under `examples/` and renders each one.
+- **Single-directory mode**: pass `--output_dir` to render the output of a specific pipeline run.
 
 Installation steps:
 ```bash
@@ -101,6 +111,18 @@ tar -xf blender-4.0.0-linux-x64.tar.xz
 # Add Blender to PATH (optional, or use full path in scripts)
 export PATH=$PATH:$(pwd)/blender-4.0.0-linux-x64
 ```
+
+Usage:
+```bash
+# Batch mode — render all results under examples/
+python scripts/render_results.py
+# Single-directory mode — render the output of 4D_from_existing.sh
+python scripts/render_results.py -- --output_dir ./examples/output
+# Single-directory mode — render the output of 4D_from_video.sh
+python scripts/render_results.py -- --output_dir ./examples/tiger_processed/
+```
+
+The rendered video (`animation.mp4`) is saved inside the specified output directory.
 
 **Note**: As we use [xformers](https://github.com/facebookresearch/xformers) `memory_efficient_attention` with [flash_attn](https://github.com/Dao-AILab/flash-attention/releases/tag/v2.7.4.post1), the GPU device compute capability needs > 8.0. Otherwise, it would pop up an error. Check your GPU compute capability in [CUDA GPUs Page](https://developer.nvidia.com/cuda-gpus#compute).
 

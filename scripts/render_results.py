@@ -175,15 +175,47 @@ def render(base_dir, item):
             image = imageio.imread(filename)
             writer.append_data(image)
     print(f"Video saved to: {output_video}")
+    
 
 
 if __name__ == "__main__":
-    # Path is relative to this script: ../examples/output/
-    scripts_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.normpath(os.path.join(scripts_dir, "..", "examples"))
+    import sys
+    import argparse
 
-    items = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
+    # Blender passes script-level args after the '--' separator
+    argv = sys.argv
+    if "--" in argv:
+        argv = argv[argv.index("--") + 1:]
+    else:
+        argv = []
 
-    for item in items:
-        print(f"Rendering {item} ...")
+    parser = argparse.ArgumentParser(description="Render animation results")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=None,
+        help=(
+            "Path to a single output directory to render "
+            "(e.g. ./examples/output or ./examples/tiger_processed/animation). "
+            "When omitted, all subdirectories under examples/ are rendered in batch."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    if args.output_dir:
+        # Single-directory mode — compatible with 4D_from_existing.sh / 4D_from_video.sh output
+        output_dir = os.path.abspath(args.output_dir)
+        base_dir = os.path.dirname(output_dir)
+        item = os.path.basename(output_dir)
+        print(f"Rendering single directory: {output_dir} ...")
         render(base_dir, item)
+    else:
+        # Batch mode: scan ../examples/ and render every subdirectory
+        scripts_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.normpath(os.path.join(scripts_dir, "..", "examples"))
+
+        items = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
+
+        for item in items:
+            print(f"Rendering {item} ...")
+            render(base_dir, item)
