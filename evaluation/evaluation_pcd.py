@@ -15,6 +15,31 @@ except ImportError:
     BLENDER_AVAILABLE = False
     print("Warning: bpy not available. GLB/FBX loading will not work.")
 
+def get_fixed_pred_rotation_matrix():
+    # Step 1: rotate -90deg around X, then -90deg around Y, then rotate +90deg around Y
+    Rx = np.array([
+        [1, 0, 0],
+        [0, np.cos(-np.pi/2), -np.sin(-np.pi/2)],
+        [0, np.sin(-np.pi/2), np.cos(-np.pi/2)]
+    ])
+    Ry_neg90 = np.array([
+        [np.cos(-np.pi/2), 0, np.sin(-np.pi/2)],
+        [0, 1, 0],
+        [-np.sin(-np.pi/2), 0, np.cos(-np.pi/2)]
+    ])
+    Ry_pos90 = np.array([
+        [np.cos(np.pi/2), 0, np.sin(np.pi/2)],
+        [0, 1, 0],
+        [-np.sin(np.pi/2), 0, np.cos(np.pi/2)]
+    ])
+    # Apply Rx first, then Ry_neg90, then Ry_pos90 (right-mult order)
+    R = Ry_pos90 @ Ry_neg90 @ Rx
+    return R
+
+def apply_fixed_pred_rotation(vertices):
+    """Apply first Rx(-90deg about X), then Ry(-90deg about Y) in right-hand coordinate system to all pred mesh vertices."""
+    R = get_fixed_pred_rotation_matrix()
+    return vertices @ R.T
 
 def load_pred_mesh_from_file(pred_file_path, frame_idx, pred_mesh_cache=None):
     """
@@ -54,6 +79,9 @@ def load_pred_mesh_from_file(pred_file_path, frame_idx, pred_mesh_cache=None):
     for i, v in enumerate(me.vertices):
         vertices[i] = v.co
     
+    # rotate
+    vertices = apply_fixed_pred_rotation(vertices)
+    
     # Extract faces
     faces = []
     for poly in me.polygons:
@@ -71,6 +99,8 @@ def load_pred_mesh_from_dir(pred_path, frame_idx):
     """Load predicted mesh from faces.npy and frame_{frame_idx:04d}.npy"""
     faces = np.load(Path(pred_path) / "faces.npy")
     vertices = np.load(Path(pred_path) / f"frame_{frame_idx:04d}.npy")
+    # Apply rotation here
+    vertices = apply_fixed_pred_rotation(vertices)
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
     return mesh
 
@@ -851,30 +881,30 @@ def evaluate_sequence(gt_path, pred_path, num_samples=2048, viz=False, icp_viz=F
     for frame_idx in range(num_frames):
         print(f"\nProcessing frame {frame_idx}/{num_frames-1}...")
         
-        # Load predicted mesh and apply prediction normalization
+        # Load predicted mesh, apply normalization, then apply ICP to align pred -> GT space
         pred_mesh = load_pred_mesh(pred_path, frame_idx, pred_mesh_cache)
         pred_vertices_norm = apply_normalization(pred_mesh.vertices, pred_center, pred_scale)
+        pred_vertices_aligned = apply_icp_alignment(pred_vertices_norm, R, t, s)
         # Use predicted faces from cache or from mesh
         pred_faces_to_use = pred_faces if pred_faces is not None else pred_mesh.faces
-        pred_mesh_norm = trimesh.Trimesh(vertices=pred_vertices_norm, faces=pred_faces_to_use, process=False)
+        pred_mesh_aligned = trimesh.Trimesh(vertices=pred_vertices_aligned, faces=pred_faces_to_use, process=False)
         
-        # Get GT frame, apply GT normalization, then apply ICP alignment
+        # Get GT frame and apply GT normalization (GT stays in normalized space)
         gt_vertices = gt_frames[frame_idx]
         gt_vertices_norm = apply_normalization(gt_vertices, gt_center, gt_scale)
-        gt_vertices_aligned = apply_icp_alignment(gt_vertices_norm, R, t, s)
         if gt_faces is not None:
-            gt_mesh_aligned = trimesh.Trimesh(vertices=gt_vertices_aligned, faces=gt_faces, process=False)
+            gt_mesh_norm = trimesh.Trimesh(vertices=gt_vertices_norm, faces=gt_faces, process=False)
         else:
-            gt_mesh_aligned = trimesh.Trimesh(vertices=gt_vertices_aligned, process=False)
+            gt_mesh_norm = trimesh.Trimesh(vertices=gt_vertices_norm, process=False)
         
         # Visualize mesh comparison for every frame
         #print(f"Visualizing mesh comparison for frame {frame_idx}...")
         if viz:
-            visualize_mesh_comparison(gt_mesh_aligned, pred_mesh_norm, frame_idx, viz_dir)
+            visualize_mesh_comparison(gt_mesh_norm, pred_mesh_aligned, frame_idx, viz_dir)
         
         # Sample points
-        gt_points = sample_points_from_mesh(gt_mesh_aligned, num_samples)
-        pred_points = sample_points_from_mesh(pred_mesh_norm, num_samples)
+        gt_points = sample_points_from_mesh(gt_mesh_norm, num_samples)
+        pred_points = sample_points_from_mesh(pred_mesh_aligned, num_samples)
         
         # Visualize point cloud comparison for every frame
         #print(f"Visualizing point cloud comparison for frame {frame_idx}...")

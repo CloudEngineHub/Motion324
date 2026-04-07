@@ -196,28 +196,44 @@ chmod +x ./scripts/4D_from_existing.sh
 
 ## 4. Evaluation
 
-You can evaluate video results with the provided `evaluation.py` script. 
+For a fair comparison across methods, it is recommended to initialize with the **same mesh**, typically generated from an image at 512×512 resolution.
 
-Example:
+### Mesh Geometry Metrics (Chamfer Distance, F-score)
+
+For a quick test, use `batch_eval_all.sh` to run both pipelines and evaluate all samples:
+
+```bash
+# Run both GT and video pipelines on the default benchmark
+bash scripts/batch_eval_all.sh --release_dir /path/to/release_dir
+
+# Run only the GT pipeline (inference_with_gt.py + evaluation)
+bash scripts/batch_eval_all.sh --gt_only
+
+# Run only the video pipeline (4D_from_video.sh + evaluation)
+bash scripts/batch_eval_all.sh --video_only
+
+# Skip inference and only run evaluation on existing outputs
+bash scripts/batch_eval_all.sh --skip_inference
+```
+
+The default benchmark path is `examples/release_80`. Sample lists are read from `dataset/short_videos.txt` and `dataset/long_videos.txt`.
+
+This compares the predicted mesh (GLB/FBX file or directory of `frame_*.npy` files) with the ground-truth point cloud. 
+It outputs metrics such as Chamfer Distance and F-score.
+
+### Video Metrics (FVD, LPIPS, DreamSim, CLIP Loss)
+
+Re-render both the generated GLB/FBX animation and the original GLB/FBX animation for comparison, **all with a white background and at 512×512 resolution**. Other rendering settings (such as lighting and materials) have little impact on the final scores, just ensure the background is white.
+
+After rendering, evaluate using `evaluation.py`:
 
 ```bash
 python ./evaluation/evaluation.py \
 --gt_paths /paths/to/gt_videos.mp4 \
---result_paths /paths/to/results_videos.mp4
+--result_paths /paths/to/rendered_results_videos.mp4
 ```
-This compares the generated result video(s) to the ground-truth and outputs metrics such as FVD, LPIPS, DreamSim, and CLIP Loss. 
 
-You can evaluate mesh geometry with the provided `evaluation_pcd.py` script. 
-
-Example:
-
-```bash
-python ./evaluation/evaluation_pcd.py \
---gt_path /paths/to/name_pointclouds \
---result_path /paths/to/mesh.fbx
-```
-This compares your mesh result with the ground-truth point cloud and evaluates the geometric error between them. 
-It outputs metrics such as Chamfer Distance and F-score.
+This script compares the rendered videos to the ground-truth, and reports metrics including FVD, LPIPS, DreamSim, and CLIP Loss.
 
 ## 5. Citation 
 
